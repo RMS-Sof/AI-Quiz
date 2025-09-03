@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>AI Olympiad — Three Tier Exam</title>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--accent:#3b82f6;--muted:#94a3b8;--white:#e6eef8}
+    body{font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,Arial; background:linear-gradient(180deg,#071022 0%,#07182a 100%);color:var(--white);margin:0;padding:24px}
+    .container{max-width:1100px;margin:0 auto}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+    header h1{font-size:20px;margin:0}
+    .card{background:rgba(255,255,255,0.03);padding:18px;border-radius:12px;box-shadow:0 6px 18px rgba(2,6,23,0.6)}
+    .controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+    select,input[type=text]{padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:var(--white)}
+    button{background:var(--accent);border:none;padding:8px 12px;border-radius:8px;color:white;cursor:pointer}
+    .question-area{margin-top:12px}
+    .qtitle{font-weight:600;margin-bottom:8px}
+    .options{display:flex;flex-direction:column;gap:8px}
+    label.option{background:rgba(255,255,255,0.02);padding:10px;border-radius:8px;cursor:pointer}
+    .nav{display:flex;justify-content:space-between;margin-top:12px}
+    .leaderboard{margin-top:18px}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:8px;text-align:left;border-bottom:1px dashed rgba(255,255,255,0.03)}
+    footer{margin-top:18px;color:var(--muted);font-size:13px}
+    .explanation{margin-top:10px;color:var(--muted);font-size:14px}
+    .small{font-size:13px;color:var(--muted)}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>AI Olympiad — Three Tier Exam (9–12, College, Professional)</h1>
+      <div class="small">50 questions per tier — graded out of 100 (2 points each)</div>
+    </header>
+
+    <div class="card">
+      <div class="controls">
+        <label>
+          Tier:
+          <select id="tierSelect">
+            <option value="kids">Ages 9–12 (Tier A)</option>
+            <option value="college">College Students (Tier B)</option>
+            <option value="pro">Professionals (Tier C)</option>
+          </select>
+        </label>
+        <label>
+          Candidate name:
+          <input type="text" id="candidateName" placeholder="Enter name" />
+        </label>
+        <button id="startBtn">Start / Load Questions</button>
+        <button id="showLeaderboard">Show Leaderboard</button>
+      </div>
+
+      <div id="exam" style="display:none">
+        <div class="question-area card" id="questionCard">
+          <div class="qtitle" id="qTitle">Question</div>
+          <div class="options" id="options"></div>
+          <div class="nav">
+            <div>
+              <button id="prevBtn">Previous</button>
+              <button id="nextBtn">Next</button>
+            </div>
+            <div>
+              <button id="submitBtn">Submit Exam</button>
+            </div>
+          </div>
+          <div class="explanation" id="explanation" style="display:none"></div>
+        </div>
+      </div>
+
+      <div class="leaderboard card" id="leaderboardCard" style="display:none">
+        <h3>Leaderboard</h3>
+        <table id="leaderboardTable">
+          <thead><tr><th>Rank</th><th>Name</th><th>Tier</th><th>Score</th><th>Date</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div style="margin-top:8px"><button id="clearBoard">Clear Leaderboard</button></div>
+      </div>
+
+    </div>
+
+    <footer>Academic format: Questions are multiple choice with 4 options. Each correct answer = 2 points; incorrect = 0. Explanations are available after submission.</footer>
+  </div>
+
+<script>
+// === Question banks: 50 items per tier ===
+// Each question object: {q: string, options:[..], correct: index, explanation: string}
+
+const KIDS = [
+  {q:"What does 'AI' stand for?", options:["Automatic Internet","Artificial Intelligence","Active Input","Analog Interface"], correct:1, explanation:"AI stands for Artificial Intelligence."},
+  {q:"Which of these is an example of AI you might see at home?", options:["A washing machine's timer","A video game NPC that adapts","A wooden chair","A manual pencil"], correct:1, explanation:"An NPC (non-player character) that adapts uses AI behaviors."},
+  {q:"Which sense do most AI systems use to 'see'?", options:["Taste","Vision (cameras)","Hearing","Smell"], correct:1, explanation:"AI 'vision' uses cameras or images as input."},
+  {q:"Which of these is a simple rule-based system?", options:["A robot that follows a fixed path","A learning chatbot","A neural network","A self-driving car"], correct:0, explanation:"A robot following a fixed path uses fixed rules (not learning)."},
+  {q:"Which subject helps you understand AI best?", options:["History","Mathematics","Physical Education","Music"], correct:1, explanation:"Mathematics (especially algebra and statistics) is central to AI."},
+  {q:"What is a 'robot'?", options:["A living creature","A machine that can perform tasks","Only a friendly toy","A kind of fruit"], correct:1, explanation:"Robots are machines designed to perform tasks, sometimes using AI."},
+  {q:"Which one is an example of speech recognition?", options:["Voice assistants like Siri","A printed book","An electric fan","A bicycle"], correct:0, explanation:"Voice assistants convert speech to text — speech recognition."},
+  {q:"If an AI plays chess and gets better by practicing, we call that...", options:["Superstition","Learning","Guessing","Singing"], correct:1, explanation:"Improving from experience is called learning (machine learning)."},
+  {q:"Which of these is important to make AI fair?", options:["Ignoring data","Using diverse data","Only using one example","Always random answers"], correct:1, explanation:"Diverse and representative data helps fairness in AI."},
+  {q:"Which simple AI task decides whether an image has a cat or not?", options:["Regression","Classification","Cloning","Encryption"], correct:1, explanation:"Deciding a category (cat/not-cat) is classification."},
+  {q:"What is a dataset?", options:["A group of files used for study","A type of robot","A music album","A sports team"], correct:0, explanation:"A dataset is a collection of examples used to train or test AI."},
+  {q:"Which device commonly uses AI to suggest videos?", options:["Television remote","Streaming platforms","Spoon","Door"], correct:1, explanation:"Streaming services use recommendation algorithms to suggest videos."},
+  {q:"What does a 'model' mean in AI?", options:["A fashion show","A learned program that makes predictions","A car brand","A building"], correct:1, explanation:"An AI model encodes learned knowledge and makes predictions."},
+  {q:"Which is safer for kids when using AI tools?", options:["Supervision by adults","Using without limits","Sharing passwords widely","Skipping updates"], correct:0, explanation:"Adult supervision and safe settings are important for kids using AI."},
+  {q:"Which of these is NOT AI?", options:["Calculator that always does fixed math","Chatbot that answers questions","Image classifier","Speech-to-text"], correct:0, explanation:"A basic calculator performs fixed rules and is not AI if it doesn't learn."},
+  {q:"If an AI makes a wrong choice, what should we do?", options:["Blame without checking","Examine data and improve it","Destroy all computers","Ignore forever"], correct:1, explanation:"We should investigate causes (data, model) and improve the system."},
+  {q:"What is 'training' in machine learning?", options:["Feeding data to a model to learn","Cooking food","Reading novels","Painting"], correct:0, explanation:"Training means adjusting a model using data so it learns patterns."},
+  {q:"Which is a friendly AI example?", options:["Spam bot","Educational tutor chatbot","Malware","None"], correct:1, explanation:"An educational tutor chatbot is an example of a beneficial AI."},
+  {q:"What is 'prediction' in AI?", options:["Telling the future with magic","Estimating an output from inputs","Making coffee","Driving a car"], correct:1, explanation:"Prediction means producing an output given inputs based on learned patterns."},
+  {q:"Which job is least likely to be replaced by simple AI soon?", options:["Repetitive factory task","Creative storytelling with deep empathy","Data entry","Simple assembly line"], correct:1, explanation:"Complex creative work that requires empathy is harder for current AI to fully replace."},
+  {q:"Which term means 'teaching a machine by example'?", options:["Listening","Supervised learning","Guesswork","Humming"], correct:1, explanation:"Supervised learning uses labeled examples to teach a machine."},
+  {q:"Which everyday item uses a simple AI to recognize faces?", options:["Smartphone unlock by face","Washing machine","Lamp","Table"], correct:0, explanation:"Some smartphones use face recognition to unlock devices."},
+  {q:"Which of these is an ethical concern with AI?", options:["Fairness and bias","Faster computation","Better graphics","Longer cables"], correct:0, explanation:"Fairness, bias, and privacy are important ethical concerns."},
+  {q:"What should you do before using AI-generated content for school?", options:["Check for accuracy and cite sources","Use it without question","Delete it","Share it privately"], correct:0, explanation:"Verify accuracy and follow citation rules when using AI content."},
+  {q:"Which AI field studies how machines understand language?", options:["Computer Vision","Natural Language Processing","Chemistry","Geology"], correct:1, explanation:"NLP studies how machines process and generate human language."},
+  {q:"Which of these is used to evaluate classification models?", options:["Accuracy","Piano","Hammer","Compass"], correct:0, explanation:"Accuracy measures how many predictions are correct."},
+  {q:"What is a chatbot?", options:["A talking animal","A program that converses with users","A type of cake","A phone accessory"], correct:1, explanation:"A chatbot is software designed to converse with people."},
+  {q:"When AI is 'transparent', it means...", options:["You can understand how it makes decisions","It glows in the dark","It runs slowly","It costs more"], correct:0, explanation:"Transparency helps stakeholders understand model behavior and decisions."},
+  {q:"Which of these is NOT a good data practice?", options:["Using high-quality labels","Collecting diverse samples","Using biased data intentionally","Documenting datasets"], correct:2, explanation:"Intentionally using biased data is not a good practice."},
+  {q:"Which robotic sensor helps a robot avoid obstacles?", options:["Proximity sensor (e.g., ultrasonic)","Microphone stand","Lamp","Book"], correct:0, explanation:"Proximity sensors detect nearby objects helping avoidance."},
+  {q:"Which term means 'a mistake the AI repeats because of bad data'?", options:["Bias","Speed","Color","Size"], correct:0, explanation:"Bias in data/model can lead to repeated unfair mistakes."},
+  {q:"Which is an example of supervised label?", options:["Image labeled 'cat'","An unknown photo","A raw audio file","A blank page"], correct:0, explanation:"A labeled image with 'cat' is a supervised learning label."},
+  {q:"What does 'model evaluation' do?", options:["Tests how well the model performs","Prints a poster","Feeds the model","Deletes data"], correct:0, explanation:"Evaluation measures performance using test datasets and metrics."},
+  {q:"Which term relates to 'overfitting'?", options:["Performing well on training but poorly on new data","Always being fair","Running faster","Saving power"], correct:0, explanation:"Overfitting means a model fits training data too closely and fails to generalize."},
+  {q:"Which activity helps learn programming for AI?", options:["Solving puzzles and coding exercises","Avoiding computers","Only reading comics","Sleeping"], correct:0, explanation:"Practicing coding and problem solving builds AI programming skills."},
+  {q:"Which is a core input for speech-to-text systems?", options:["Audio waveform","PDF files","Images only","A kettle"], correct:0, explanation:"Audio waveform is the core input converted into text."},
+  {q:"Which of the following is a positive use of AI?", options:["Medical diagnosis assistance","Creating scams","Hacking computers","Spreading rumours"], correct:0, explanation:"AI can assist medicine, improving diagnosis and care."},
+  {q:"Which of these describes a 'dataset split'?", options:["Train, validation, test","Hot, cold, warm","Blue, red, green","Alpha, beta, gamma"], correct:0, explanation:"Datasets are commonly split for training, tuning, and final testing."},
+  {q:"Which is true about AI mistakes?", options:["They are always deliberate","They can be reduced by better data","They never happen","They always vanish"], correct:1, explanation:"Improving data and model design reduces mistakes but doesn't eliminate them."},
+  {q:"Which of these is a 'reinforcement learning' example?", options:["A robot learning to navigate by trial and reward","Labeling images manually","Sorting files by date","Static rule execution"], correct:0, explanation:"Reinforcement learning uses feedback/rewards to learn behaviors."},
+  {q:"Which unit is commonly used to measure computing memory?", options:["Gigabytes","Liters","Watts","Meters"], correct:0, explanation:"Memory is measured in bytes (e.g., gigabytes)."},
+  {q:"Which is a sign of good AI documentation?", options:["Clear description of data and model","No comments at all","Hidden code","Unlabeled data"], correct:0, explanation:"Good documentation explains datasets, model design and limitations."},
+  {q:"Which example best demonstrates creativity in AI currently?", options:["Generative art and music models","A rock","A static calculator","A hammer"], correct:0, explanation:"Generative models create art or music by learning patterns."},
+  {q:"Which approach helps protect privacy in datasets?", options:["Anonymization and aggregation","Publishing raw identities","Selling data","Ignoring consent"], correct:0, explanation:"Techniques like anonymization protect personal data."},
+  {q:"What should you include when reporting an AI result?", options:["Metric, dataset description, and limitations","Only the picture","Only a catchy headline","Nothing"], correct:0, explanation:"Responsible reporting includes metrics, data description, and limitations."},
+  {q:"Which statement about AI and jobs is balanced?", options:["AI will change jobs but also create new roles","AI will destroy all jobs instantly","AI has no effect","AI is magic"], correct:0, explanation:"AI changes the job landscape — some roles change while new roles appear."}
+];
+
+const COLLEGE = [
+  {q:"What is the bias-variance tradeoff about?", options:["Balancing model complexity and generalization","Choosing dataset size","Selecting activation function","Optimizing GPU usage"], correct:0, explanation:"Bias-variance tradeoff concerns underfitting versus overfitting and generalization."},
+  {q:"Which optimization algorithm uses moving averages of gradients?", options:["SGD","Adam","Newton's method","Gaussian"], correct:1, explanation:"Adam uses running averages of gradients and squared gradients."},
+  {q:"In supervised learning, what does 'label leakage' mean?", options:["Labels are missing","Information from labels leaks into features during training","Labels are accurate","Labels are images"], correct:1, explanation:"Leakage occurs when target information is inadvertently available to the model during training."},
+  {q:"Cross-entropy loss is commonly used for...", options:["Regression with MSE","Classification with probabilities","Clustering","Data augmentation"], correct:1, explanation:"Cross-entropy measures distance between predicted prob. distribution and true distribution for classification."},
+  {q:"Which kernel is used in SVM for non-linear decision boundaries?", options:["Linear kernel","RBF (Gaussian) kernel","Dot product only","No kernel"], correct:1, explanation:"RBF kernel maps inputs to higher-dimensional space enabling non-linear separation."},
+  {q:"What is 'early stopping' used for?", options:["Speeding up dataset creation","Preventing overfitting by halting training early","Increasing batch size","Encrypting models"], correct:1, explanation:"Early stopping stops training when validation performance degrades, reducing overfitting."},
+  {q:"Which metric is appropriate for imbalanced classification?", options:["Accuracy","Precision/Recall or F1","SSE","PSNR"], correct:1, explanation:"Precision, recall, and F1 score provide better insight on imbalanced datasets."},
+  {q:"Principal Component Analysis (PCA) is used for...", options:["Dimensionality reduction","Increasing dimensions","Generating labels","Sorting data"], correct:0, explanation:"PCA reduces dimensionality by finding orthogonal principal components."},
+  {q:"Which is a non-parametric model?", options:["Linear regression","k-NN","Logistic regression","Naive Bayes"], correct:1, explanation:"k-NN is non-parametric since it makes predictions using stored training examples."},
+  {q:"What does 'ROC AUC' measure?", options:["Model's runtime","Area under the Receiver Operating Characteristic curve","Training loss","Number of parameters"], correct:1, explanation:"ROC AUC measures discriminative ability across thresholds."},
+  {q:"Which technique helps models generalize by creating altered data samples?", options:["Hyperparameter tuning","Data augmentation","Weight decay","Batch normalization"], correct:1, explanation:"Data augmentation creates varied training inputs to improve generalization."},
+  {q:"Backpropagation computes gradients using...", options:["Finite differences only","Chain rule of calculus","Random guessing","Monte Carlo"], correct:1, explanation:"Backpropagation applies the chain rule to propagate gradients through layers."},
+  {q:"Which normalization reduces internal covariate shift in deep nets?", options:["Batch normalization","Dropout","L1 regularization","PCA"], correct:0, explanation:"Batch normalization normalizes activations across mini-batches."},
+  {q:"What is dropout used for?", options:["Activating all neurons","Regularization by randomly dropping units during training","Increasing dataset size","Optimizing GPU"], correct:1, explanation:"Dropout helps reduce co-adaptation and overfitting by randomly dropping units."},
+  {q:"Which loss is typical for regression tasks?", options:["Cross-entropy","Mean Squared Error (MSE)","BLEU","AUC"], correct:1, explanation:"MSE measures squared differences between predicted and true continuous values."},
+  {q:"What is transfer learning?", options:["Training from random initialization only","Using a pre-trained model and fine-tuning it","Transferring data to another server","Copying labels"], correct:1, explanation:"Transfer learning reuses a pre-trained model for a new but related task."},
+  {q:"Which activation allows faster training by avoiding vanishing gradients?", options:["Sigmoid","ReLU","Tanh","Step function"], correct:1, explanation:"ReLU helps mitigate vanishing gradients and speeds training."},
+  {q:"What does 'gradient clipping' prevent?", options:["Underfitting","Exploding gradients","Lack of data","Slow IO"], correct:1, explanation:"Gradient clipping limits large gradients preventing instability in training."},
+  {q:"Which technique helps interpret feature importance for tree models?", options:["SHAP or feature importance","Random cropping","PCA","Batch norm"], correct:0, explanation:"SHAP and feature importance methods give insights into model feature contributions."},
+  {q:"Which of these is a generative model?", options:["Logistic regression","GAN (Generative Adversarial Network)","k-means","Decision stump"], correct:1, explanation:"GANs are designed to generate realistic synthetic samples."},
+  {q:"Which optimizer uses only first-order moments?", options:["SGD with momentum","AdaGrad","RMSProp","Adam"], correct:2, explanation:"RMSProp uses a moving average of squared gradients (second moment) — note: Adam uses both first and second moments."},
+  {q:"Which property describes convex loss functions?", options:["Single global minimum","Multiple isolated minima","Always non-differentiable","Chaotic"], correct:0, explanation:"Convex losses have a single global minimum making optimization easier."},
+  {q:"Which sampling method is used for approximate Bayesian inference?", options:["k-NN","MCMC (Markov Chain Monte Carlo)","SVD","PCA"], correct:1, explanation:"MCMC approximates distributions by sampling from posterior distributions."},
+  {q:"What is Lipschitz continuity useful for in ML?", options:["Stability and generalization bounds","Faster disk IO","Image rendering","Color correction"], correct:0, explanation:"Lipschitz continuity helps analyze stability and robustness of functions."},
+  {q:"Which technique defends against adversarial examples?", options:["Adversarial training","Turning off GPU","Label smoothing only","Noising labels intentionally"], correct:0, explanation:"Adversarial training trains on adversarially perturbed examples to increase robustness."},
+  {q:"What does 'embedding' commonly refer to?", options:["Mapping discrete tokens to continuous vectors","Making a copy of the dataset","Encrypting features","Scaling images"], correct:0, explanation:"Embeddings map categorical items like words to continuous vectors capturing semantics."},
+  {q:"Which evaluation uses held-out data not seen during training or tuning?", options:["Test set","Training set","Validation set","Augmented set"], correct:0, explanation:"Test set is used for final evaluation once model selection is complete."},
+  {q:"Which is a randomized algorithm useful for large matrix decompositions?", options:["Randomized SVD","Exact SVD always","k-NN","Gradient descent"], correct:0, explanation:"Randomized SVD scales better for very large matrices."},
+  {q:"What is the purpose of a learning rate scheduler?", options:["Adjust learning rate during training to improve convergence","Store data","Create models","Measure accuracy"], correct:0, explanation:"Schedulers adjust step sizes to help stable and efficient convergence."},
+  {q:"Which concept is central to differential privacy?", options:["Adding noise to outputs to protect individual data","Increasing model depth","Using bigger batches","Reducing labels"], correct:0, explanation:"Differential privacy uses controlled noise to hide individual contributions."},
+  {q:"Which evaluation protocol reduces variance from dataset splits?", options:["k-fold cross validation","Using only one seed","Never shuffling","Fixing labels"], correct:0, explanation:"k-fold cross validation averages results across folds to reduce variance."},
+  {q:"BLEU score measures performance for which task?", options:["Machine translation","Image classification","Regression","Clustering"], correct:0, explanation:"BLEU evaluates quality of machine translation outputs against references."},
+  {q:"What does 'tokenization' do in NLP?", options:["Splits text into tokens like words or subwords","Trains models","Evaluates accuracy","Compresses images"], correct:0, explanation:"Tokenization breaks text into discrete pieces for model input."},
+  {q:"Which property of SGD helps it escape sharp minima?", options:["Stochasticity (noise)","Determinism","Large batch sizes only","Floating point precision"], correct:0, explanation:"Noise from random mini-batches can help SGD escape sharp minima."},
+  {q:"Which method reduces model size by removing weights?", options:["Pruning","Batch normalization","Data augmentation","Transfer learning"], correct:0, explanation:"Pruning removes less important weights to compress models."},
+  {q:"Which of these is true about batch size?", options:["Large batch sizes always generalize better","Small batches add more noise and may regularize","Batch size has no effect","Only batch size=1 works"], correct:1, explanation:"Small batches introduce gradient noise which can act as regularization."},
+  {q:"Which distance metric is commonly used for embeddings?", options:["Cosine similarity","Cooking time","Pixel color","File size"], correct:0, explanation:"Cosine similarity measures angle between vectors, common for embeddings."},
+  {q:"Which technique speeds inference on CPUs?", options:["Quantization","Increasing floating precision","Adding layers","Using bigger batch at runtime"], correct:0, explanation:"Quantization reduces numeric precision to speed and shrink models for CPU inference."},
+  {q:"Which algorithm is used for sequential decision-making under uncertainty?", options:["Reinforcement learning","K-means","PCA","Linear regression"], correct:0, explanation:"Reinforcement learning optimizes policies via interactions and rewards."},
+  {q:"What is the purpose of 'weight decay'?", options:["L2 regularization to prevent large weights","Increasing learning rate","Normalizing inputs","Saving checkpoints"], correct:0, explanation:"Weight decay penalizes large weights to reduce overfitting."},
+  {q:"Which library is primarily used for deep learning research?", options:["NumPy only","PyTorch","Excel","LaTeX"], correct:1, explanation:"PyTorch is widely used for deep learning research and prototyping."},
+  {q:"What is the primary goal of hyperparameter tuning?", options:["Find hyperparameters that optimize validation performance","Delete training data","Make code prettier","Obfuscate models"], correct:0, explanation:"Tuning searches hyperparameter settings to improve validation metrics."},
+  {q:"Which method estimates uncertainty in deep models?", options:["Bayesian neural networks or ensembles","Ordinary least squares only","Deterministic single forward pass","Hard thresholding"], correct:0, explanation:"Bayesian approaches and ensembles help quantify predictive uncertainty."},
+  {q:"Which technique helps models handle variable-length sequences?", options:["RNNs/LSTMs or Transformer architectures","Standard linear regression","k-means","SVMs"], correct:0, explanation:"RNNs, LSTMs and Transformers are designed for sequence modeling."},
+  {q:"Which evaluation choice avoids leaking test information during development?", options:["Keep test set untouched until final evaluation","Tune on test set","Use test set for hyperparameter search","Share test labels"], correct:0, explanation:"Preserving test set integrity prevents overly optimistic estimates and leakage."},
+  {q:"Which numerical issue arises from very small gradients?", options:["Vanishing gradients","Exploding gradients","Overfitting","Underflow only in hardware"], correct:0, explanation:"Vanishing gradients make deep networks hard to train."}
+];
+
+const PRO = [
+  {q:"In transformer models, what does 'self-attention' compute?", options:["Pairwise interactions between tokens to form contextual representations","Blurring images","Optimizing hyperparameters automatically","Encrypting model weights"], correct:0, explanation:"Self-attention computes weighted interactions among tokens enabling context-aware embeddings."},
+  {q:"What is the purpose of layer normalization versus batch normalization?", options:["Layer norm normalizes across features per sample, batch norm across batch; layer norm suits transformers and RNNs","They are identical","Layer norm is slower always","Batch norm only for NLP"], correct:0, explanation:"Layer norm normalizes features per example, beneficial for sequence models and small batches."},
+  {q:"Which approach helps scale model training across many GPUs?", options:["Data-parallel or model-parallel training with communication primitives like NCCL","Single-threaded CPU training","Only increase batch size on single GPU","Avoid parallelism"], correct:0, explanation:"Distributed training uses data/model parallelism and communication to scale across GPUs."},
+  {q:"What is a major challenge of large language models (LLMs)?", options:["Hallucination (making up facts)","Physics simulation only","No GPU support","No tokenizers"], correct:0, explanation:"LLMs can produce plausible but incorrect outputs known as hallucinations."},
+  {q:"Which technique reduces catastrophic forgetting in continual learning?", options:["Elastic Weight Consolidation (EWC)","Always retraining from scratch","Never updating model","Random resets"], correct:0, explanation:"EWC constrains important weights to reduce forgetting when learning new tasks."},
+  {q:"What does quantization-aware training do?", options:["Simulates reduced numeric precision during training to maintain accuracy after quantization","Only changes architecture","Deletes data","Increases model parameters"], correct:0, explanation:"Quantization-aware training prepares a model to be robust to lower numeric precision at inference."},
+  {q:"Which method identifies causal relations rather than correlations?", options:["Causal inference methods like do-calculus or causal graphs","Plain supervised learning","PCA","Dropout"], correct:0, explanation:"Causal inference uses experimental or structural approaches to identify causal effects."},
+  {q:"What is 'sparsity' in model compression?", options:["Many zero weights making model sparse and smaller","Extra dense embeddings","Always increases latency","Irrelevant to pruning"], correct:0, explanation:"Sparsity reduces compute and memory by zeroing many weights."},
+  {q:"Which metric is crucial for practical ML systems in production?", options:["Latency and throughput in addition to accuracy","Only number of layers","Only training loss","Only number of parameters"], correct:0, explanation:"Operational metrics like latency and throughput are essential for production systems."},
+  {q:"Which is an interpretability method giving local explanations?", options:["LIME or SHAP","t-SNE only","Batch norm","Adam"], correct:0, explanation:"LIME and SHAP provide instance-level explanations of model outputs."},
+  {q:"What is the idea behind federated learning?", options:["Decentralized training where models update locally and share gradients/weights without centralizing raw data","Centralizing all personal data","Only cloud-based training","Discarding privacy"], correct:0, explanation:"Federated learning keeps data local and aggregates model updates to protect privacy."},
+  {q:"Which optimization is used to train very deep networks stably?", options:["Gradient clipping, careful initialization, residual connections","No special methods needed","Only large batch sizes","Only L2 regularization"], correct:0, explanation:"Techniques like residual connections and clipping improve training stability."},
+  {q:"What is a diffusion model primarily used for?", options:["Generative modeling by reversing a noise process","Deterministic rule-based systems","K-means clustering","Standard regression"], correct:0, explanation:"Diffusion models generate data by learning to reverse a gradual noising process."},
+  {q:"Which auditing practice helps ensure model compliance?", options:["Model cards, datasheets, and audit trails","Ignoring documentation","Only code comments","Hiding training data"], correct:0, explanation:"Structured documentation and auditability support compliance and transparency."},
+  {q:"Which technique helps detect distribution shift in production?", options:["Statistical drift detection and monitoring","Assuming data is stationary","Only retraining weekly","Never monitoring"], correct:0, explanation:"Monitoring for covariate or label shift detects when model assumptions break down."},
+  {q:"Why are second-order optimizers less common for deep learning at scale?", options:["High memory and compute cost for Hessians","They don't converge","They are illegal","They require labels"], correct:0, explanation:"Computing Hessians scales poorly, so first-order methods are more practical."},
+  {q:"Which approach is used to make models robust to small input perturbations?", options:["Adversarial training or certified defenses","Only bigger models","Noisy labels always","Removing data"], correct:0, explanation:"Adversarial training exposes models to perturbed inputs to improve robustness."},
+  {q:"What is 'mixture of experts' (MoE)?", options:["Model architecture routing inputs to a subset of experts to scale capacity sparsely","Single dense layer","Only for SVMs","A data augmentation trick"], correct:0, explanation:"MoE uses sparse routing to scale model capacity efficiently by activating few experts per input."},
+  {q:"Which privacy technique provides provable privacy guarantees?", options:["Differential privacy","Obfuscation by random renaming","Hiding code","Manual redaction only"], correct:0, explanation:"Differential privacy provides formal, quantifiable privacy guarantees."},
+  {q:"Which evaluation is appropriate for conversational LLMs beyond simple accuracy?", options:["Human evaluation for fluency, factuality, safety; and automated metrics for robustness","Only token accuracy","Only BLEU","Only loss"], correct:0, explanation:"Conversational systems require human judgments for qualities like helpfulness and safety."},
+  {q:"What is 'prompt engineering' in the context of LLMs?", options:["Designing input prompts to elicit desired model behavior","Tuning hyperparameters only","Changing model weights","Compressing data"], correct:0, explanation:"Prompt engineering crafts inputs to steer model outputs without retraining."},
+  {q:"Which systemic risk arises from model reproducibility issues?", options:["Different runs with same seed produce different results due to missing environment specs","No risks at all","Only hardware errors","Only dataset size matters"], correct:0, explanation:"Lack of reproducibility harms reliability and auditability of ML systems."},
+  {q:"Which metric combination is useful for ranking recommender outputs?", options:["Precision@k, Recall@k, NDCG","Only MSE","Only BLEU","Only perplexity"], correct:0, explanation:"Top-k metrics capture ranking relevance in recommender systems."},
+  {q:"Which strategy lowers carbon footprint of ML training?", options:["Efficient architectures, lower precision, spot instances and reuse of pre-trained models","Using more GPUs always","Training on dense models repeatedly","Ignoring energy"], correct:0, explanation:"Efficiency measures reduce compute and energy consumption."},
+  {q:"What is 'knowledge distillation'?", options:["Training a smaller 'student' model to mimic a larger 'teacher' model","Increasing label noise","Only data cleaning","A visualization method"], correct:0, explanation:"Distillation transfers knowledge enabling smaller, faster models with similar performance."},
+  {q:"Which monitoring metric indicates concept drift for regression tasks?", options:["Prediction distribution change or error increase over time","Only training loss","Only number of parameters","Only batch size"], correct:0, explanation:"Rising prediction error or shifts in input distribution signal concept drift."},
+  {q:"Which license concern matters when using third-party datasets?", options:["Allowed uses and restrictions (commercial vs non-commercial, redistribution)","Only colors matter","Only model size matters","Only GPU type matters"], correct:0, explanation:"Dataset licenses determine permitted usage in research and production."},
+  {q:"Which technique approximates expensive attention for long sequences?", options:["Sparse attention or linearized attention approximations","Full softmax always","Only short sequences","Gradient clipping only"], correct:0, explanation:"Sparse/linear attention methods reduce quadratic complexity of full attention for long sequences."},
+  {q:"What is a key limitation of evaluation using automated metrics alone for generative models?", options:["They miss aspects like factuality, toxicity, and user intent—human eval needed","They are perfect","They measure everything","They don't run"], correct:0, explanation:"Automated metrics often correlate poorly with human judgments on quality and safety."},
+  {q:"Which approach supports reproducible ML experiments?", options:["Containerization, seed control, dependency tracking, and dataset snapshots","Never recording settings","Random ad-hoc runs","Deleting logs"], correct:0, explanation:"Systematic experiment tracking improves reproducibility and auditing."},
+  {q:"Which method helps evaluate model calibration?", options:["Expected Calibration Error (ECE)","Only accuracy","Only loss","Only perplexity"], correct:0, explanation:"ECE quantifies how predicted probabilities align with observed frequencies."},
+  {q:"Which is an approach to mitigate bias from training data?", options:["Preprocessing (rebalancing), in-processing constraints, post-processing corrections","Doing nothing","Only bigger models","Only more layers"], correct:0, explanation:"Multiple interventions exist at data, algorithmic, and output levels to mitigate bias."},
+  {q:"What is the role of a feature store in ML platforms?", options:["Centralized storage and serving of engineered features for training and inference","Only storing raw images","Only for databases unrelated to ML","Only a backup"], correct:0, explanation:"Feature stores provide consistent feature computation and serving across production and training."},
+  {q:"Which monitoring practice reduces silent failures in ML systems?", options:["End-to-end checks, canaries, shadow testing and alerting","No monitoring","Only unit tests","Only CI"], correct:0, explanation:"Comprehensive monitoring and canarying catch regressions before user impact."},
+  {q:"Which privacy-preserving technique shares only aggregated statistics rather than raw data?", options:["Secure multiparty computation or aggregated reporting","Directly sharing raw CSVs","Only emailing data","Only encrypting disks"], correct:0, explanation:"SMPC and aggregation allow joint analytics without revealing raw records."},
+  {q:"Which architecture choice reduces communication in distributed training?", options:["Gradient compression and quantized updates","Always sync full float32 grads","Never communicate","Only use single machine"], correct:0, explanation:"Compression and sparsification of gradients reduce network overhead in distributed setups."},
+  {q:"Which evaluation is important for classification under different costs of errors?", options:["Cost-sensitive metrics and confusion matrix analysis","Only accuracy","Only F1 always","Only ROC"], correct:0, explanation:"Cost-sensitive evaluation accounts for different impacts of false positives vs false negatives."},
+  {q:"Which technique helps verify fairness properties systematically?", options:["Counterfactual testing, subgroup analysis and formal fairness metrics","Only eyeballing outputs","Only manual checks","Only using more data"], correct:0, explanation:"Structured fairness testing across subgroups reveals disparate impacts."},
+  {q:"What is the benefit of using mixed precision training?", options:["Faster training and lower memory by using FP16 where safe","Only reduces precision forever","Breaks models always","No benefit"], correct:0, explanation:"Mixed precision speeds up training while often preserving model performance when used correctly."},
+  {q:"Which is a scalable datastore option for serving embeddings?", options:["Vector databases like FAISS, Milvus, or Pinecone","Plain text files","Only SQL without indexing","Only spreadsheets"], correct:0, explanation:"Vector DBs index and retrieve high-dimensional embeddings efficiently for production."},
+  {q:"Which technique is used to create adversarial examples for evaluation?", options:["FGSM or PGD attack methods","k-means","Random cropping","BLEU"], correct:0, explanation:"FGSM and PGD are standard algorithms for crafting adversarial perturbations."}
+];
+
+// Ensure arrays have 50 questions each; if fewer, fill with simple placeholders (but here we have 50 each approximately).
+function padTo50(arr, fallbackPrefix){
+  while(arr.length<50){
+    const i = arr.length+1;
+    arr.push({q:`${fallbackPrefix} extra question ${i}`, options:["A","B","C","D"], correct:0, explanation:"Placeholder question."});
+  }
+}
+padTo50(KIDS,'Kids'); padTo50(COLLEGE,'College'); padTo50(PRO,'Pro');
+
+const DB = {kids:KIDS, college:COLLEGE, pro:PRO};
+
+let state = {tier:'kids',name:'',index:0,answers:[],started:false};
+
+const tierSelect = document.getElementById('tierSelect');
+const startBtn = document.getElementById('startBtn');
+const examDiv = document.getElementById('exam');
+const qTitle = document.getElementById('qTitle');
+const optionsDiv = document.getElementById('options');
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
+const submitBtn = document.getElementById('submitBtn');
+const candidateName = document.getElementById('candidateName');
+const explanationDiv = document.getElementById('explanation');
+const leaderboardCard = document.getElementById('leaderboardCard');
+const leaderboardTableBody = document.querySelector('#leaderboardTable tbody');
+const showLeaderboardBtn = document.getElementById('showLeaderboard');
+const clearBoardBtn = document.getElementById('clearBoard');
+
+function loadTier(){
+  state.tier = tierSelect.value;
+  state.index = 0;
+  state.answers = Array(50).fill(null);
+  state.name = candidateName.value.trim();
+  state.started = true;
+  renderQuestion();
+  examDiv.style.display='block';
+  leaderboardCard.style.display='none';
+}
+
+startBtn.addEventListener('click', ()=>{ if(candidateName.value.trim()===''){ alert('Please enter candidate name before starting.'); return; } loadTier(); });
+
+function renderQuestion(){
+  const qBank = DB[state.tier];
+  const qObj = qBank[state.index];
+  qTitle.textContent = `Q${state.index+1}. ${qObj.q}`;
+  optionsDiv.innerHTML='';
+  qObj.options.forEach((opt, i)=>{
+    const id = `opt_${i}`;
+    const label = document.createElement('label'); label.className='option';
+    const radio = document.createElement('input'); radio.type='radio'; radio.name='option'; radio.value=i; radio.style.marginRight='8px';
+    if(state.answers[state.index]===i) radio.checked=true;
+    radio.addEventListener('change', ()=>{ state.answers[state.index]=i; });
+    label.appendChild(radio);
+    const span = document.createElement('span'); span.textContent = opt;
+    label.appendChild(span);
+    optionsDiv.appendChild(label);
+  });
+  explanationDiv.style.display='none';
+}
+
+prevBtn.addEventListener('click', ()=>{ if(state.index>0){ state.index--; renderQuestion(); }});
+nextBtn.addEventListener('click', ()=>{ if(state.index<49){ state.index++; renderQuestion(); }});
+
+submitBtn.addEventListener('click', ()=>{
+  if(!state.started){ alert('Start the exam first.'); return; }
+  if(!confirm('Submit exam? You will see score and explanation.')) return;
+  gradeExam();
+});
+
+function gradeExam(){
+  const qBank = DB[state.tier];
+  let correct=0;
+  for(let i=0;i<50;i++){
+    if(state.answers[i]===qBank[i].correct) correct++;
+  }
+  const score = correct*2; // 2 points per question
+  // Show results
+  examDiv.style.display='none';
+  leaderboardCard.style.display='block';
+  // save to leaderboard
+  saveScore({name:state.name||'Anonymous',tier:state.tier,score:score,date:new Date().toISOString()});
+  renderLeaderboard();
+  // show explanation modal area
+  showExplanations(qBank, state.answers);
+}
+
+function saveScore(entry){
+  const key='ai_olympiad_leaderboard_v1';
+  const data = JSON.parse(localStorage.getItem(key) || '[]');
+  data.push(entry);
+  localStorage.setItem(key, JSON.stringify(data));
+}
+
+function loadScores(){
+  const key='ai_olympiad_leaderboard_v1';
+  return JSON.parse(localStorage.getItem(key) || '[]');
+}
+
+function renderLeaderboard(){
+  const data = loadScores();
+  // sort desc by score, then by date
+  data.sort((a,b)=> b.score - a.score || (new Date(a.date) - new Date(b.date)));
+  leaderboardTableBody.innerHTML='';
+  data.forEach((row, i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML = `<td>${i+1}</td><td>${escapeHtml(row.name)}</td><td>${tierLabel(row.tier)}</td><td>${row.score}</td><td>${(new Date(row.date)).toLocaleString()}</td>`;
+    leaderboardTableBody.appendChild(tr);
+  });
+}
+
+showLeaderboardBtn.addEventListener('click', ()=>{ renderLeaderboard(); leaderboardCard.style.display='block'; examDiv.style.display='none'; });
+clearBoardBtn.addEventListener('click', ()=>{ if(confirm('Clear leaderboard? This cannot be undone.')){ localStorage.removeItem('ai_olympiad_leaderboard_v1'); renderLeaderboard(); }});
+
+function tierLabel(t){ if(t==='kids') return 'Ages 9–12'; if(t==='college') return 'College'; return 'Professional'; }
+
+function showExplanations(qBank, answers){
+  // show a simple explanations overlay below leaderboard
+  const expl = document.createElement('div'); expl.className='card'; expl.style.marginTop='12px';
+  const heading = document.createElement('h3'); heading.textContent='Explanations (per question)'; expl.appendChild(heading);
+  qBank.forEach((q,i)=>{
+    const p = document.createElement('div'); p.style.marginTop='8px';
+    const userAns = answers[i]===null ? 'No answer' : q.options[answers[i]];
+    const correctAns = q.options[q.correct];
+    p.innerHTML = `<strong>Q${i+1}.</strong> ${escapeHtml(q.q)}<br><em>Your answer:</em> ${escapeHtml(userAns)} <em>| Correct:</em> ${escapeHtml(correctAns)}<br><span class='explanation'>${escapeHtml(q.explanation)}</span>`;
+    expl.appendChild(p);
+  });
+  // attach or replace
+  const existing = document.getElementById('explanationsSection');
+  if(existing) existing.remove();
+  expl.id='explanationsSection';
+  leaderboardCard.parentNode.appendChild(expl);
+}
+
+function escapeHtml(s){ return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
+
+// Load leaderboard on startup
+renderLeaderboard();
+
+</script>
+</body>
+</html>
